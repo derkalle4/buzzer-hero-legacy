@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Buzzer Heroes</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<meta name="description" content="Buzzer Heroes Script">
+		<meta name="author" content="Karl-Martin Minkner">
+
+		<link href="/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+		<link href="/assets/css/heroic-features.css" rel="stylesheet">
+
+		<script type="text/javascript" src="/assets/socket.io.min.js"></script>
+
+		<script type="text/javascript" charset="utf-8">
+		var socket = io.connect('http://' + document.domain + ':' + location.port);
+		var tmpStatus = {};
+		socket.on('connect', function() {
+			$('#game_connection').removeClass().addClass('btn').addClass('btn-success');
+			$('#game_connection').text('Connected');
+			socket.emit('get.status');
+		});
+		socket.on('disconnect', function() {
+			$('#game_connection').removeClass().addClass('btn').addClass('btn-danger');
+			$('#game_connection').text('Disconnected');
+		});
+		socket.on('game.status', function(msg) {
+			status_worker(msg);
+		});
+		// update data according to server
+		function status_worker(msg) {
+			// set status
+			switch (msg['status']) {
+				case 0:
+					// show input fields for names
+					$('[id^=buzzer_] #name_input').show();
+					if (msg['buzzer_ids'].length < 2)
+						$('#game_status').text('Reset Players');
+					else
+						$('#game_status').text('Start game');
+					$('#game_status').removeClass().addClass('btn').addClass('btn-warning');
+					break;
+				case 1:
+					$('[id^=buzzer_] #name_input').hide();
+					$('#game_status').text('Stop Game');
+					$('#game_status').removeClass().addClass('btn').addClass('btn-success');
+					break;
+				default:
+					$('#game_status').text('Unknown');
+					$('#game_status').removeClass().addClass('btn').addClass('btn-dark');
+			}
+			// set all controllers to invisible
+			$('[id^=buzzer_]').hide();
+			$('[id^=buzzer_] img').attr('src', '/assets/images/buzzer_grey.png');
+			$('[id^=buzzer_] #answers a').removeClass().addClass('btn').addClass('btn-light');
+			// set name of teams
+			for (var key in msg['player_names']) {
+				// only when player name is not empty
+				if (typeof msg['player_names'][key] !== "undefined") {
+					$('#buzzer_' + key + ' h4').text(msg['player_names'][key]);
+				}
+			}
+			// set visibility of controllers but hide everything first
+			for (i = 0; i < msg['buzzer_ids'].length; i++) {
+				$('#buzzer_' + msg['buzzer_ids'][i]).show();
+			}
+			// highlight controller who pressed a button
+			for (var key in msg['buzzer_pressed']) {
+				if(msg['buzzer_pressed'][key] == 'red') {
+					$('#buzzer_' + key+ ' img').attr('src', '/assets/images/buzzer_red.png');
+				}else{
+					$('#buzzer_' + key + ' #' + msg['buzzer_pressed'][key]).removeClass().addClass('btn').addClass('btn-success');
+				}
+			}
+			// set buzzers count
+			$('#game_buzzerscount').text('Controller: ' + msg['controller_count']);
+			$('#game_playercount').text('Player: ' + msg['buzzer_ids'].length);
+		}
+		// start / stop game
+		function send_game_status() {
+			socket.emit('set.gamestate');
+		}
+		// reset button for next question
+		function send_reset() {
+			socket.emit('set.reset');
+		}
+		// reset button for next question
+		function update_playername(id, value) {
+			socket.emit('set.playername', [id, value]);
+		}
+		// do quit
+		function do_quit() {
+			socket.emit('do_quit');
+		}
+		</script>
+	</head>
+
+	<body>
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+			<div class="container">
+				<a class="navbar-brand" href="#">Buzzer Hero</a>
+			</div>
+		</nav>
+
+		<div class="container">
+
+			<div class="container my-3">
+				<div class="row">
+					<div class="col-sm">
+						<a id="game_quit" href="#" class="btn btn-info" onclick="do_quit()">Quit</a>
+						<a id="game_connection" href="#" class="btn btn-danger">Disconnected</a>
+						<a id="game_status" href="#" class="btn btn-dark" onclick="send_game_status()">Unknown</a>
+						<a id="game_status" href="#" class="btn btn-info" onclick="send_reset()">Reset</a>
+						<a id="game_buzzerscount" href="#" class="btn btn-light">Controller: 0</a>
+						<a id="game_playercount" href="#" class="btn btn-light">Player: 0</a>
+					</div>
+				</div>
+			</div>
+
+			<div class="row text-center">
+
+				<div id="buzzer_1_0" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 1</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 1" onchange="update_playername('1_0', this.value)"/>
+						</div>
+						<!--<div id="answers" class="card-footer">
+							<a id="blue" href="#" class="btn btn-light">Answer 1</a>
+							<a id="orange" href="#" class="btn btn-light">Answer 2</a>
+							<a id="green" href="#" class="btn btn-light">Answer 3</a>
+							<a id="yellow" href="#" class="btn btn-light">Answer 4</a>
+						</div>-->
+					</div>
+				</div>
+
+				<div id="buzzer_1_1" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 2</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 2" onchange="update_playername('1_1', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_1_2" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 3</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 3" onchange="update_playername('1_2', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_1_3" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 4</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 4" onchange="update_playername('1_3', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_2_0" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 5</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 5" onchange="update_playername('2_0', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_2_1" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 6</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 6" onchange="update_playername('2_1', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_2_2" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 7</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 7" onchange="update_playername('2_2', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+				<div id="buzzer_2_3" class="col-lg-3 col-md-6 mb-4" style="display:none;">
+					<div class="card h-100">
+						<img class="card-img-top" src="/assets/images/buzzer_grey.png" alt="">
+						<div class="card-body">
+							<h4 class="card-title" id="name">Player 8</h4>
+							<input type="text" id="name_input" class="form-control" value="Player 8" onchange="update_playername('2_3', this.value)"/>
+						</div>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
+		<script src="/assets/vendor/jquery/jquery.min.js"></script>
+		<script src="/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+	</body>
+
+</html>

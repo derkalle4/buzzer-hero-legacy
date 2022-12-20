@@ -1,0 +1,13 @@
+[Unit]
+Description=Buzzer Hero
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/buzzer/
+Environment=FLASK_CONFIG=production
+ExecStart=/usr/bin/python3 /home/pi/buzzer/buzzer.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
